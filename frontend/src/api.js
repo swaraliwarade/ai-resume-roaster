@@ -1,5 +1,7 @@
 const API_URL = import.meta.env.VITE_API_URL;
 
+console.log("API_URL =", API_URL);
+
 export const roastResume = async (resume) => {
   const response = await fetch(`${API_URL}/api/roast`, {
     method: "POST",

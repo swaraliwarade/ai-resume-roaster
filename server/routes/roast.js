@@ -80,6 +80,8 @@ ${resume}
     for (let i = 0; i < apiKeys.length; i++) {
       const key =
         apiKeys[(currentKeyIndex + i) % apiKeys.length];
+        
+        console.log("Loaded Gemini keys:", apiKeys.length);
 
       try {
         console.log(

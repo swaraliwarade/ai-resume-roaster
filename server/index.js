@@ -1,9 +1,6 @@
 const express = require("express");
 const cors = require("cors");
 const dotenv = require("dotenv");
-import cors from "cors";
-
-app.use(cors());
 
 dotenv.config();
 
@@ -12,7 +9,6 @@ const roastRoute = require("./routes/roast");
 const app = express();
 
 app.use(cors());
-
 app.use(express.json());
 
 app.get("/", (req, res) => {

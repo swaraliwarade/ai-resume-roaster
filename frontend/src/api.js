@@ -1,6 +1,10 @@
+const API_URL =
+  import.meta.env.VITE_API_URL ||
+  "http://localhost:8000";
+
 export const roastResume = async (resume) => {
   const response = await fetch(
-    "http://localhost:8000/api/roast",
+    `${API_URL}/api/roast`,
     {
       method: "POST",
       headers: {

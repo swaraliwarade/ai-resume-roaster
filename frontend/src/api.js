@@ -1,15 +1,16 @@
 const API_URL = "https://ai-resume-roaster.up.railway.app";
 
-console.log("API_URL =", API_URL);
-
 export const roastResume = async (resume) => {
-  const response = await fetch(`${API_URL}/api/roast`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({ resume }),
-  });
+  const response = await fetch(
+    new URL("/api/roast", API_URL).toString(),
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ resume }),
+    }
+  );
 
   if (!response.ok) {
     const error = await response.text();

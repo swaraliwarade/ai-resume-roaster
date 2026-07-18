@@ -1,9 +1,10 @@
-import { useState } from "react";
-
 import { roastResume } from "./api";
+import { useState, useEffect } from "react";
+import { getRoastHistory } from "./services/history";
 
 const uploadResume = async (file) => {
   const formData = new FormData();
+
   formData.append("resume", file);
 
   const response = await fetch(
@@ -26,57 +27,65 @@ const uploadResume = async (file) => {
 };
 
 export default function App() {
-
   const [resume, setResume] = useState("");
-
   const [result, setResult] = useState("");
-
   const [loading, setLoading] = useState(false);
-
   const [loadingText, setLoadingText] = useState("");
-
   const [fileName, setFileName] = useState("");
-  
-  
+  const [history, setHistory] = useState([]);
+
   const MIN_LENGTH = 200;
-  
-const handleFileUpload = async (e) => {
-  const file = e.target.files[0];
 
-  if (!file) return;
+  const handleFileUpload = async (e) => {
+    const file = e.target.files[0];
 
-  setFileName(file.name);
+    if (!file) return;
 
-  try {
-    setLoading(true);
+    setFileName(file.name);
 
-    const extractedText = await uploadResume(file);
+    try {
+      setLoading(true);
 
-    setResume(extractedText);
-  } catch (error) {
-  console.error("UPLOAD ERROR:", error);
+      const extractedText = await uploadResume(file);
 
-  alert(
-    error?.message || "Failed to extract PDF text."
-  );
-}finally {
-    setLoading(false);
+      setResume(extractedText);
+    } catch (error) {
+      console.error("UPLOAD ERROR:", error);
+
+      alert(
+        error?.message || "Failed to extract PDF text."
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  async function loadHistory() {
+    try {
+      const data = await getRoastHistory();
+      setHistory(data);
+    } catch (error) {
+      console.error(error);
+    }
   }
-};
 
-const loadingMessages = [
-  "Reading your resume...",
-  "Consulting recruiters...",
-  "Finding buzzwords...",
-  "Preparing emotional damage...",
-  "Checking if recruiters will survive this...",
-  "Roasting achievements...",
-  "Summoning hiring managers...",
-  "Looking for actual impact...",
-  "Almost ready to roast..."
-];
+  useEffect(() => {
+    loadHistory();
+  }, []);
 
-const handleSubmit = async () => {
+  const loadingMessages = [
+    "Reading your resume...",
+    "Consulting recruiters...",
+    "Finding buzzwords...",
+    "Preparing emotional damage...",
+    "Checking if recruiters will survive this...",
+    "Roasting achievements...",
+    "Summoning hiring managers...",
+    "Looking for actual impact...",
+    "Almost ready to roast..."
+  ];
+
+  const handleSubmit = async () => {
   if (resume.length < MIN_LENGTH) return;
 
   setLoading(true);
@@ -93,6 +102,7 @@ const handleSubmit = async () => {
 
     if (data.success) {
       setResult(data.roast);
+      await loadHistory();
     } else {
       setResult("🔥 The AI got roasted before your resume did.");
     }
@@ -103,6 +113,10 @@ const handleSubmit = async () => {
 
   setLoading(false);
 };
+
+useEffect(() => {
+  loadHistory();
+}, []);
 
   return (
 
@@ -365,6 +379,30 @@ const handleSubmit = async () => {
         </div>
 
       )}
+        <div className="mt-10">
+        <h2 className="text-2xl font-bold mb-4">
+          Roast History
+        </h2>
+
+        {history.length === 0 ? (
+          <p>No roasts yet.</p>
+        ) : (
+          history.map((item) => (
+            <div
+              key={item.id}
+              className="border rounded-lg p-4 mb-3"
+            >
+              <p className="font-semibold">
+                Roast #{item.id}
+              </p>
+
+              <p className="text-sm opacity-70">
+                {new Date(item.created_at).toLocaleString()}
+              </p>
+            </div>
+          ))
+        )}
+      </div>
 
     </div>
 

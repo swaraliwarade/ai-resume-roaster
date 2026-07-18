@@ -8,6 +8,7 @@ const roastRoute = require("./routes/roast");
 const uploadRoute = require("./routes/upload");
 const supabase = require("./config/supabase");
 const app = express();
+const historyRoute = require("./routes/history");
 
 app.use(cors());
 app.use(express.json({ limit: "5mb" }));
@@ -18,6 +19,7 @@ app.get("/", (req, res) => {
 
 app.use("/api/upload", uploadRoute);
 app.use("/api/roast", roastRoute);
+app.use("/api/history", historyRoute);
 
 const PORT = process.env.PORT || 8000;
 

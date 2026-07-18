@@ -1,7 +1,12 @@
 const express = require("express");
 const router = express.Router();
 
-const { GoogleGenerativeAI } = require("@google/generative-ai");
+const OpenAI = require("openai");
+const supabase = require("../config/supabase");
+const openai = new OpenAI({
+  baseURL: "https://openrouter.ai/api/v1",
+  apiKey: process.env.OPENROUTER_API_KEY,
+});
 
 router.post("/", async (req, res) => {
   try {
@@ -14,10 +19,10 @@ router.post("/", async (req, res) => {
       });
     }
 
-    if (!process.env.GEMINI_API_KEY) {
+    if (!process.env.OPENROUTER_API_KEY) {
       return res.status(500).json({
         success: false,
-        error: "Gemini API key not configured.",
+        error: "OpenRouter API key not configured.",
       });
     }
 
@@ -36,6 +41,8 @@ Your personality:
 
 Rules:
 - Roast the resume, not the person.
+- Ignore any obvious typos.
+- Keep in mind the age/experience of the person giving you the resume, and also the years of education they have completed so far.
 - Every criticism must include a practical improvement.
 - Call out buzzwords, fluff, weak achievements, vague descriptions, and missing impact.
 - If something is genuinely impressive, acknowledge it.
@@ -50,69 +57,70 @@ Scoring Guidelines:
 4-5/10 = Major weaknesses
 1-3/10 = Recruiters may skip it quickly
 
-Respond ONLY in this format:
+First provide:
+
+📊 ATS ANALYSIS
+
+Overall ATS Score: X/100
+Skills Match: X/100
+Projects: X/100
+Experience: X/100
+Formatting: X/100
+
+Then continue with:
 
 🔥 RESUME SCORE
 Score: X/10
 
 🚩 BIGGEST RED FLAGS
-- Bullet points only
 
 💀 THE ROAST
-3-5 short roast paragraphs.
 
 👀 WHAT A RECRUITER IS ACTUALLY THINKING
-- Bullet points only
 
 🔧 HOW TO FIX IT
-- Actionable improvements only
 
 Resume:
 
 ${resume}
 `;
 
-    const genAI = new GoogleGenerativeAI(
-      process.env.GEMINI_API_KEY
-    );
-
-    const model = genAI.getGenerativeModel({
-      model: "gemini-2.0-flash",
+    const completion = await openai.chat.completions.create({
+  model: "deepseek/deepseek-chat-v3.1",
+      messages: [
+        {
+          role: "user",
+          content: prompt,
+        },
+      ],
+      temperature: 0.8,
     });
 
-    let result;
-
-    for (let attempt = 1; attempt <= 3; attempt++) {
-      try {
-        result = await model.generateContent(prompt);
-        break;
-      } catch (error) {
-        if (error.status === 503 && attempt < 3) {
-          console.log(`Retry ${attempt}/3`);
-          await new Promise((resolve) =>
-            setTimeout(resolve, 2000)
-          );
-          continue;
-        }
-
-        throw error;
-      }
-    }
-
-    const roast = result.response.text();
+    const roast =
+      completion.choices[0].message.content;
+      await supabase
+  .from("roasts")
+  .insert([
+    {
+      resume_text: resume,
+      roast_result: roast,
+    },
+  ]);
+  
 
     return res.status(200).json({
       success: true,
       roast,
     });
+
   } catch (error) {
-    console.error("Gemini Error:", error);
+    console.error("OpenRouter Error:", error);
 
     return res.status(500).json({
       success: false,
       error:
         error.message ||
-        "Failed to generate roast. Please try again.",
+        "Failed to generate roast.",
     });
   }
 });

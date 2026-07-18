@@ -2,7 +2,28 @@ import { useState } from "react";
 
 import { roastResume } from "./api";
 
+const uploadResume = async (file) => {
+  const formData = new FormData();
+  formData.append("resume", file);
 
+  const response = await fetch(
+    "http://localhost:8000/api/upload",
+    {
+      method: "POST",
+      body: formData,
+    }
+  );
+
+  const data = await response.json();
+
+  console.log("Upload response:", data);
+
+  if (!data.success) {
+    throw new Error(data.error);
+  }
+
+  return data.text;
+};
 
 export default function App() {
 
@@ -14,7 +35,34 @@ export default function App() {
 
   const [loadingText, setLoadingText] = useState("");
 
+  const [fileName, setFileName] = useState("");
+  
+  
   const MIN_LENGTH = 200;
+  
+const handleFileUpload = async (e) => {
+  const file = e.target.files[0];
+
+  if (!file) return;
+
+  setFileName(file.name);
+
+  try {
+    setLoading(true);
+
+    const extractedText = await uploadResume(file);
+
+    setResume(extractedText);
+  } catch (error) {
+  console.error("UPLOAD ERROR:", error);
+
+  alert(
+    error?.message || "Failed to extract PDF text."
+  );
+}finally {
+    setLoading(false);
+  }
+};
 
 const loadingMessages = [
   "Reading your resume...",
@@ -109,6 +157,24 @@ const handleSubmit = async () => {
       {/* INPUT CARD */}
 
       <div className="backdrop-blur-xl bg-white/5 border border-white/10 rounded-3xl p-6 shadow-2xl">
+      <label className="cursor-pointer">
+          <input
+            type="file"
+            accept=".pdf"
+            onChange={handleFileUpload}
+            className="hidden"
+          />
+
+          <div className="inline-flex items-center gap-2 px-5 py-3 rounded-xl bg-slate-800 text-white hover:bg-slate-700 transition-all">
+            📄 Upload Resume PDF
+          </div>
+        </label>
+{fileName && (
+  <p className="text-sm text-gray-400 mt-2">
+    Selected: {fileName}
+  </p>
+)}
+              
 
         <textarea
 

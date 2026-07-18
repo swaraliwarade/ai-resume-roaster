@@ -1,8 +1,8 @@
-const API_URL = "https://ai-resume-roaster.up.railway.app";
+const API_URL = import.meta.env.VITE_API_URL;
 
-export const roastResume = async (resume) => {
+export async function roastResume(resume) {
   const response = await fetch(
-    new URL("/api/roast", API_URL).toString(),
+    `${API_URL}/api/roast`,
     {
       method: "POST",
       headers: {
@@ -12,10 +12,13 @@ export const roastResume = async (resume) => {
     }
   );
 
+  const data = await response.json();
+
   if (!response.ok) {
-    const error = await response.text();
-    throw new Error(error || "Failed to roast resume");
+    throw new Error(
+      data.error || "Failed to generate roast"
+    );
   }
 
-  return response.json();
-};
+  return data;
+}

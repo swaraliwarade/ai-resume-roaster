@@ -3,23 +3,21 @@ const router = express.Router();
 
 const { GoogleGenerativeAI } = require("@google/generative-ai");
 
-const apiKeys = [
-  process.env.GEMINI_API_KEY_1,
-  process.env.GEMINI_API_KEY_2,
-  process.env.GEMINI_API_KEY_3,
-  process.env.GEMINI_API_KEY_4,
-].filter(Boolean);
-
-let currentKeyIndex = 0;
-
 router.post("/", async (req, res) => {
   try {
     const { resume } = req.body;
 
-    if (!resume || resume.length < 200) {
+    if (!resume || resume.trim().length < 200) {
       return res.status(400).json({
         success: false,
         error: "Resume must contain at least 200 characters.",
+      });
+    }
+
+    if (!process.env.GEMINI_API_KEY) {
+      return res.status(500).json({
+        success: false,
+        error: "Gemini API key not configured.",
       });
     }
 
@@ -62,7 +60,6 @@ Score: X/10
 
 💀 THE ROAST
 3-5 short roast paragraphs.
-Make them witty, memorable, and recruiter-focused.
 
 👀 WHAT A RECRUITER IS ACTUALLY THINKING
 - Bullet points only
@@ -75,57 +72,47 @@ Resume:
 ${resume}
 `;
 
-    let lastError = null;
+    const genAI = new GoogleGenerativeAI(
+      process.env.GEMINI_API_KEY
+    );
 
-    for (let i = 0; i < apiKeys.length; i++) {
-      const key =
-        apiKeys[(currentKeyIndex + i) % apiKeys.length];
-        
-        console.log("Loaded Gemini keys:", apiKeys.length);
+    const model = genAI.getGenerativeModel({
+      model: "gemini-2.0-flash",
+    });
 
+    let result;
+
+    for (let attempt = 1; attempt <= 3; attempt++) {
       try {
-        console.log(
-          `Trying Gemini Key ${
-            (currentKeyIndex + i) % apiKeys.length + 1
-          }`
-        );
-
-        const genAI = new GoogleGenerativeAI(key);
-
-        const model = genAI.getGenerativeModel({
-          model: "gemini-1.5-flash",
-        });
-
-        const result = await model.generateContent(prompt);
-
-        const roast = result.response.text();
-
-        currentKeyIndex =
-          (currentKeyIndex + i + 1) % apiKeys.length;
-
-        return res.json({
-          success: true,
-          roast,
-        });
+        result = await model.generateContent(prompt);
+        break;
       } catch (error) {
-        console.error(
-          `Key ${
-            (currentKeyIndex + i) % apiKeys.length + 1
-          } failed`
-        );
+        if (error.status === 503 && attempt < 3) {
+          console.log(`Retry ${attempt}/3`);
+          await new Promise((resolve) =>
+            setTimeout(resolve, 2000)
+          );
+          continue;
+        }
 
-        lastError = error;
+        throw error;
       }
     }
 
-    throw lastError;
+    const roast = result.response.text();
+
+    return res.status(200).json({
+      success: true,
+      roast,
+    });
   } catch (error) {
-    console.error("All Gemini keys failed:", error);
+    console.error("Gemini Error:", error);
 
     return res.status(500).json({
       success: false,
       error:
-        "All Gemini API keys failed. Please try again later.",
+        error.message ||
+        "Failed to generate roast. Please try again.",
     });
   }
 });
